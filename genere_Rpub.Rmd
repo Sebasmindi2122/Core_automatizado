@@ -47,7 +47,7 @@ giant.component <- function(graph) {
 
 ```{r,echo = TRUE, results = "hide"}
 library(httr)   #Url semilla wos y scopus
-key <- '1qWT8ekf7LUPp2EYFfJHIlS9oL8ybGBnsb6hTt9efob4'     
+key <- ''     
 url1 <- paste0('https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=',key,'&exportFormat=xlsx')
 httr::GET(url1, write_disk(tf <- tempfile(fileext = ".xlsx")))
 #Congurar segun los años de publicaicon.
@@ -977,6 +977,8 @@ egos |>
 # Tree of Science
 
 ```{r}
+#1qWT8ekf7LUPp2EYFfJHIlS9oL8ybGBnsb6hTt9efob4
+
 tos %>% 
   DT::datatable(class = "cell-border stripe", 
                 rownames = F, 
