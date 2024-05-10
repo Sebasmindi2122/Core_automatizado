@@ -1,0 +1,185 @@
+---
+title: "Scientometric Analysis"
+author: "Sebastian Robledo"
+date: "1/10/2023"
+output: 
+  html_document:
+            toc: TRUE
+            toc_float: TRUE
+            code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = c('svg')) # set output device to svg
+
+```
+
+# Creating the environment
+
+```{r, message=FALSE, warning=FALSE}
+library(renv)
+library(tidyverse)
+library(tidygraph)
+library(ggraph)
+library(igraph)
+library(bibliometrix)
+library(tosr)
+library(here)
+library(lubridate)
+#library(sjrdata)
+library(openxlsx)
+library(zoo)
+library(RSQLite)
+library(journalabbr)
+library(ggraph)
+library(openxlsx)
+library(XML)
+library(plyr)
+library(readxl)
+source("verbs.R")
+giant.component <- function(graph) {
+  cl <- igraph::clusters(graph)
+  igraph::induced.subgraph(graph, 
+                           which(cl$membership == which.max(cl$csize)))
+}
+
+```
+
+# Data getting
+
+```{r}
+library(readxl)
+library(httr)
+url1<-'https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=15I7DNXFtvT3N5ELQ6l5rXD51r5d8T9TtgPmDvdGGMnI&exportFormat=xlsx'
+httr::GET(url1, write_disk(tf <- tempfile(fileext = ".xlsx")))
+# wos_scopus <- readxl::read_excel(tf, 1L)
+# wos <- readxl::read_excel(tf, 2L)
+# scopus <- readxl::read_excel(tf, 3L)
+# reference_df <- readxl::read_excel(tf, 4L)
+# journal_df <- readxl::read_excel(tf, 5L)
+# author_df <- readxl::read_excel(tf, 6L)
+TC_all <- readxl::read_excel(tf, 7L)
+figure_1_data <- readxl::read_excel(tf, 8L)
+# table_2_country <- readxl::read_excel(tf, 10L)
+# figure_2_country_wos_scopus <- readxl::read_excel(tf, 11L)
+# figure_2_country_wos_scopus_1 <-
+#   readxl::read_excel(tf, 12L) |>
+#   tidygraph::as_tbl_graph(directed = FALSE) |>
+#   activate(nodes) |>
+#   dplyr::mutate(community = tidygraph::group_louvain(),
+#                 degree = tidygraph::centrality_degree(),
+#                 community = as.factor(community))
+# table_3_journal <- readxl::read_excel(tf, 13L)
+# table_4_authors <- readxl::read_excel(tf, 14L)
+# AU_CO_links <- readxl::read_excel(tf, 15L)
+# tos <- readxl::read_excel(tf, 16L)
+# edges_tos <- readxl::read_excel(tf, 17L)
+# nodes_tos <- readxl::read_excel(tf, 18L)
+# SO_edges <- readxl::read_excel(tf, 19L)
+# SO_nodes <- readxl::read_excel(tf, 20L)
+# AU_ego_edges <- readxl::read_excel(tf, 21L)
+# AU_ego_nodes <- readxl::read_excel(tf, 22L)
+```
+
+
+
+Combine charts using Python Matplotlib & Reticulate
+
+```{r message=FALSE, warning=FALSE}
+library(reticulate)
+use_condaenv("r-reticulate", required = TRUE)
+plt <- import("numpy")
+np <- import("numpy")
+```
+
+```{r message=FALSE, warning=FALSE}
+# From Double get integers 
+# TC y
+TC_all$TC_sum_all <- as.integer(TC_all$TC_sum_all)
+```
+
+```{python include=FALSE}
+# Using python and reticulate let us call r variables by adding r. before variable name and continue python sintaxis
+# Figure 1C
+# tc means total citations
+import numpy as np
+tcx = r.TC_all['PY']
+tcy = r.TC_all['TC_sum_all']
+tcy = [int(x) for x in tcy] 
+# Figure 1B
+# tp means total publications
+tpx = r.figure_1_data['PY']
+tpy = r.figure_1_data['total']
+tpy = [int(x) for x in tpy] 
+#--------------------------------------
+# Figure 1A
+# Wos
+wx = r.figure_1_data['PY']
+wx1 = wx - np.array(0.3) # Here we moved wos bars
+wy = r.figure_1_data['wos']
+wy = [int(x) for x in wy] 
+# Scopus
+sx = r.figure_1_data['PY']
+sx1 = sx + np.array(0.3) # here we moved scopus bars
+sy = r.figure_1_data['scopus']
+sy = [int(x) for x in sy] 
+```
+
+```{python, fig.ext='svg', fig.width=10, fig.height=6}
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.ticker import FuncFormatter
+# ax=axes
+fig, ax = plt.subplots()
+# First plot Total Publications - time series
+ax.plot(tpx, tpy, color='r',marker='o', label='Total Publications')
+ax.set_xlabel('Year')
+ax.set_ylabel('Total Publications', color='r')
+# Customization for bar charts
+barw = 0.5
+ax.bar(sx, sy, color='g', label = 'Scopus', alpha = 0.5, width=barw)
+ax.bar(wx1, wy, color='orange', label = 'WoS', alpha=0.8, width=barw)
+# Y2 - Total citations
+twin_axes = ax.twinx()
+twin_axes.plot(tcx, tcy, color = 'purple',marker='o', label='Total Citations')
+twin_axes.set_ylabel('Total Citations', color='purple')
+# Customize
+plt.title('Total Scientific Production vs. Total Citations')
+# y2 Total Citation label location
+plt.legend(loc='center left')
+# True or False to get the grid at the background
+ax.grid(False)
+# y1 label location
+ax.legend(loc='upper left')
+# Y2 limit depends of tcy scale in this case 1400 improves label location
+plt.ylim(0, 6000) #########  <-----Important--------- """"Change Y2 Coordinate"""""
+# plt.annotate() customize numbers for each position
+for i, label in enumerate(tcy):
+  plt.annotate(label, (tcx[i], tcy[i] + 0.5), color='purple', size=8)
+
+for i, label in enumerate(tpy):
+  ax.annotate(label, (tpx[i], tpy[i] + 0.8), color='red', size=8)
+
+for i, label in enumerate(wy):
+  ax.annotate(label, (wx1[i], wy[i] + 0.1), color='brown', size=8)
+
+for i, label in enumerate(sy):
+  ax.annotate(label, (sx[i], sy[i] + 0.2),color='green', size=8)
+
+# Rotate x ticks
+plt.xticks(tpx)
+fig.autofmt_xdate(rotation = 70)
+# The Y1 ticks depends from tpy scale limits
+yticks = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105] ########## <-----Important---- Choose scale .. just specify which numbers you want
+ax.set_yticks(yticks)
+# Export Figure as SVG
+plt.savefig("ScientificProd_john_edison_ai_math.svg")
+
+plt.show()
+```
+
+
+
+
+
